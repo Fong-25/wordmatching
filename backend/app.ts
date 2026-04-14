@@ -2,8 +2,11 @@ import express from "express";
 import cors from "cors";
 import { wordRoutes } from "./routes/word.route.js";
 import path from "path";
+import { fileURLToPath } from "url";
 
 export const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
