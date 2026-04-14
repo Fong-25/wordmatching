@@ -13,10 +13,10 @@ app.use(express.json());
 app.use("/api/words", wordRoutes);
 
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, "../frontend/dist")))
+    app.use(express.static(path.join(__dirname, "../../frontend/dist")))
 
     app.get(/^(?!\/api).*/, (req, res) => {
-        res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"))
+        res.sendFile(path.join(__dirname, "../../frontend", "dist", "index.html"))
     })
 }
 
