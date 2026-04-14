@@ -34,13 +34,13 @@ export default function GameScreen({ config, onFinish }) {
 
     // Fetch words on mount
     useEffect(() => {
-        let url = '/api/words'
+        let url = 'api/words'
         if (config.type === 'specific') url += `?level=${config.level}`
         if (config.type === 'range') url += `?fromLevel=${config.fromLevel}&toLevel=${config.toLevel}`
 
         const fetchWords = async () => {
             try {
-                const r = await fetch(url)
+                const r = await fetch(`${import.meta.env.VITE_API_URL}/${url}`)
                 if (!r.ok) throw new Error('Server error')
 
                 const data = await r.json()
