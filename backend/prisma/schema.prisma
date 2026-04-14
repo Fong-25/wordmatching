@@ -4,8 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -13,14 +12,16 @@ datasource db {
 }
 
 model Word {
-  id                String @id @default(cuid())
-  word              String
-  Frequency         Int
-  Postgres          String
-  Definition        String
-  CEFR              CEFRLevel
-  FrequencySource   String
+  id              String    @id @default(cuid())
+  word            String
+  Frequency       Int
+  pos             String
+  Definition      String
+  Example         String?
+  CEFR            CEFRLevel
+  FrequencySource String
 }
+
 enum CEFRLevel {
   A1
   A2

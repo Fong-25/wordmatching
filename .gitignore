@@ -67,3 +67,4 @@ yarn-error.log*
 enriched_words.csv
 valid_words_sorted_by_frequency.csv
 word_list_cefr.csv
+script.py

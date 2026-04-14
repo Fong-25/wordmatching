@@ -13,8 +13,9 @@ const BATCH_SIZE = 1000;
 type WordInsert = {
   word: string;
   Frequency: number;
-  Postgres: string;
+  pos: string;
   Definition: string;
+  Example: string | null;
   CEFR: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
   FrequencySource: string;
 };
@@ -57,6 +58,25 @@ async function flushBatch(batch: WordInsert[]): Promise<number> {
   return batch.length;
 }
 
+async function shuffleWordTable(): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(`
+      CREATE TEMP TABLE "Word_shuffled" AS
+      SELECT *
+      FROM "Word"
+      ORDER BY RANDOM()
+    `);
+
+    await tx.$executeRawUnsafe(`TRUNCATE TABLE "Word"`);
+
+    await tx.$executeRawUnsafe(`
+      INSERT INTO "Word" ("id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "FrequencySource")
+      SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "FrequencySource"
+      FROM "Word_shuffled"
+    `);
+  });
+}
+
 async function main(): Promise<void> {
   const input = createReadStream(CSV_PATH);
   const reader = createInterface({ input, crlfDelay: Infinity });
@@ -71,7 +91,7 @@ async function main(): Promise<void> {
     if (!line) continue;
 
     const columns = parseCsvLine(line);
-    if (columns.length < 7) {
+    if (columns.length < 8) {
       skipped += 1;
       continue;
     }
@@ -80,8 +100,9 @@ async function main(): Promise<void> {
     const frequency = Number(columns[2]);
     const partOfSpeech = columns[3]?.trim();
     const definition = columns[4]?.trim();
-    const cefr = columns[5]?.trim();
-    const source = columns[6]?.trim();
+    const example = columns[5]?.trim();
+    const cefr = columns[6]?.trim();
+    const source = columns[7]?.trim();
 
     if (!word || !partOfSpeech || !definition || !source || !VALID_CEFR.has(cefr as WordInsert["CEFR"])) {
       skipped += 1;
@@ -96,8 +117,9 @@ async function main(): Promise<void> {
     batch.push({
       word,
       Frequency: Math.trunc(frequency),
-      Postgres: partOfSpeech,
+      pos: partOfSpeech,
       Definition: definition,
+      Example: example && example.toLowerCase() !== "example not available" ? example : null,
       CEFR: cefr as WordInsert["CEFR"],
       FrequencySource: source,
     });
@@ -109,6 +131,7 @@ async function main(): Promise<void> {
   }
 
   inserted += await flushBatch(batch);
+  await shuffleWordTable();
   console.log(`Seed complete. Inserted: ${inserted}, skipped: ${skipped}`);
 }
 
