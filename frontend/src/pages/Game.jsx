@@ -32,8 +32,25 @@ export default function GameScreen({ config, onFinish }) {
     const isBlockingRef = useRef(false) // blocks taps during wrong-animation
     const timerRef = useRef(null)
 
+    const startTimer = () => {
+        timerRef.current = setInterval(() => {
+            elapsedRef.current += 1
+            setElapsed((p) => p + 1)
+        }, 1000)
+    }
+
     // Fetch words on mount
     useEffect(() => {
+        if (config.type === 'replay' && config.words?.length) {
+            const data = config.words
+            setWords(data)
+            setShuffledWords(shuffle(data))
+            setShuffledDefs(shuffle(data))
+            setLoading(false)
+            startTimer()
+            return () => clearInterval(timerRef.current)
+        }
+
         let url = 'api/words'
         if (config.type === 'specific') url += `?level=${config.level}`
         if (config.type === 'range') url += `?fromLevel=${config.fromLevel}&toLevel=${config.toLevel}`
@@ -51,10 +68,11 @@ export default function GameScreen({ config, onFinish }) {
                 setShuffledDefs(shuffle(data))
                 setLoading(false)
                 // Start timer
-                timerRef.current = setInterval(() => {
-                    elapsedRef.current += 1
-                    setElapsed((p) => p + 1)
-                }, 1000)
+                // timerRef.current = setInterval(() => {
+                //     elapsedRef.current += 1
+                //     setElapsed((p) => p + 1)
+                // }, 1000)
+                startTimer()
             } catch (e) {
                 setError(e.message || 'Failed to load words.')
             }

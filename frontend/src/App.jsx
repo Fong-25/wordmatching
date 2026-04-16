@@ -3,6 +3,28 @@ import SetupScreen from './pages/Setup.jsx'
 import GameScreen from './pages/Game.jsx'
 import ResultScreen from './pages/Result.jsx'
 
+const HISTORY_KEY = 'vocabmatch_history'
+const MAX_HISTORY = 10
+
+function saveRoundToHistory(gameConfig, result) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    const entry = {
+      id: Date.now(),
+      playedAt: new Date().toISOString(),
+      config: gameConfig,
+      words: result.words,
+      score: result.score,
+      wrongAttempts: result.wrongAttempts,
+      timeElapsed: result.timeElapsed
+    }
+    const update = [entry, ...existing].slice(0, MAX_HISTORY)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(update))
+  } catch (error) {
+    console.warn("Failed to save round to history:  ", error)
+  }
+}
+
 function App() {
   const [screen, setScreen] = useState('setup')
   const [gameConfig, setGameConfig] = useState(null)
@@ -15,6 +37,7 @@ function App() {
   }
 
   const handleFinish = (result) => {
+    saveRoundToHistory(gameConfig, result)
     setGameResult(result)
     setScreen('result')
   }
