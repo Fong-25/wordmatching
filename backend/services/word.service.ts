@@ -10,7 +10,7 @@ type WordRecord = {
   Definition: string;
   Example: string | null;
   CEFR: CEFRLevel;
-  FrequencySource: string;
+  CEFRSource: string;
 };
 
 const CEFR_ORDER: CEFRLevel[] = [
@@ -39,7 +39,7 @@ async function getRandomWordsByLevels(levels: CEFRLevel[]): Promise<WordRecord[]
 
   const placeholders = levels.map((_, index) => `$${index + 1}`).join(", ");
   const query = `
-    SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "FrequencySource"
+    SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "CEFRSource"
     FROM "Word"
     WHERE "CEFR" IN (${placeholders})
     ORDER BY RANDOM()
@@ -51,7 +51,7 @@ async function getRandomWordsByLevels(levels: CEFRLevel[]): Promise<WordRecord[]
 
 export const getWords = async (): Promise<WordRecord[]> => {
   return (await prisma.$queryRawUnsafe(`
-    SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "FrequencySource"
+    SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "CEFRSource"
     FROM "Word"
     ORDER BY RANDOM()
     LIMIT ${MAX_WORDS}

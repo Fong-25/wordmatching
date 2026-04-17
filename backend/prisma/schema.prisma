@@ -12,14 +12,14 @@ datasource db {
 }
 
 model Word {
-  id              String    @id @default(cuid())
-  word            String
-  Frequency       Int
-  pos             String
-  Definition      String
-  Example         String?
-  CEFR            CEFRLevel
-  FrequencySource String
+  id         String    @id @default(cuid())
+  word       String
+  Frequency  Int
+  pos        String
+  Definition String
+  Example    String?
+  CEFR       CEFRLevel
+  CEFRSource String
 }
 
 enum CEFRLevel {

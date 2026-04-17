@@ -6,7 +6,7 @@ import { createInterface } from "node:readline";
 import { prisma } from "./prisma.js";
 
 // const prisma = new PrismaClient();
-const CSV_PATH = resolve(process.cwd(), "..", "enriched_words.csv");
+const CSV_PATH = resolve(process.cwd(), "..", "enriched_words_v2.csv");
 const VALID_CEFR = new Set(["A1", "A2", "B1", "B2", "C1", "C2"] as const);
 const BATCH_SIZE = 1000;
 
@@ -17,7 +17,7 @@ type WordInsert = {
   Definition: string;
   Example: string | null;
   CEFR: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-  FrequencySource: string;
+  CEFRSource: string;
 };
 
 function parseCsvLine(line: string): string[] {
@@ -61,6 +61,10 @@ async function flushBatch(batch: WordInsert[]): Promise<number> {
 async function shuffleWordTable(): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(`
+      DROP TABLE IF EXISTS "Word_shuffled";
+    `);
+
+    await tx.$executeRawUnsafe(`
       CREATE TEMP TABLE "Word_shuffled" AS
       SELECT *
       FROM "Word"
@@ -70,8 +74,8 @@ async function shuffleWordTable(): Promise<void> {
     await tx.$executeRawUnsafe(`TRUNCATE TABLE "Word"`);
 
     await tx.$executeRawUnsafe(`
-      INSERT INTO "Word" ("id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "FrequencySource")
-      SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "FrequencySource"
+      INSERT INTO "Word" ("id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "CEFRSource")
+      SELECT "id", "word", "Frequency", "pos", "Definition", "Example", "CEFR", "CEFRSource"
       FROM "Word_shuffled"
     `);
   });
@@ -84,9 +88,14 @@ async function main(): Promise<void> {
   let inserted = 0;
   let skipped = 0;
 
-  await prisma.word.deleteMany({});
+  // await prisma.word.deleteMany({});
 
+  let isFirstLine = true
   for await (const rawLine of reader) {
+    if (isFirstLine) {
+      isFirstLine = false
+      continue
+    }
     const line = rawLine.trim();
     if (!line) continue;
 
@@ -121,7 +130,7 @@ async function main(): Promise<void> {
       Definition: definition,
       Example: example && example.toLowerCase() !== "example not available" ? example : null,
       CEFR: cefr as WordInsert["CEFR"],
-      FrequencySource: source,
+      CEFRSource: source,
     });
 
     if (batch.length >= BATCH_SIZE) {
