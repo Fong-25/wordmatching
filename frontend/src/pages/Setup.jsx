@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 const HISTORY_KEY = 'vocabmatch_history'
@@ -63,12 +63,142 @@ function clearHistory() {
     localStorage.removeItem(HISTORY_KEY)
 }
 
+function ReplayPreviewModal({ entry, onClose, onPlay }) {
+    useEffect(() => {
+        document.body.style.overflow = 'hidden'
+        return () => { document.body.style.overflow = '' }
+    })
+
+    if (!entry) return null
+    const { words, score, wrongAttempts, timeElapsed, config } = entry
+    const maxScore = words.length * 10
+    const pct = Math.round((score / maxScore) * 100)
+    const stars = wrongAttempts === 0 ? 3 : wrongAttempts <= 2 ? 2 : 1
+    const formatTime = (s) => {
+        const m = Math.floor(s / 60)
+        const sec = s % 60
+        return `${m}:${sec.toString().padStart(2, '0')}`
+    }
+
+    return (
+        <div
+            className='fixed inset-0 z-50 flex flex-col justify-end'
+            style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+        >
+            {/* Sheet */}
+            <div
+                className="bg-white rounded-t-3xl w-full max-w-md mx-auto flex flex-col"
+                style={{
+                    maxHeight: '88vh',
+                    animation: 'sheet-up 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+                }}
+            >
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-1 shrink-0">
+                    <div className="w-10 h-1 rounded-full bg-gray-200" />
+                </div>
+
+                {/* Header */}
+                <div className="px-5 pt-2 pb-4 border-b border-gray-100 shrink-0">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 className="font-black text-gray-900 text-lg leading-tight">
+                                {configLabel(config)}
+                            </h2>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-yellow-400 text-sm tracking-tight">
+                                    {'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}
+                                </span>
+                                <span className="text-xs text-gray-400 font-semibold">
+                                    {pct}% · {wrongAttempts} miss{wrongAttempts !== 1 ? 'es' : ''} · {formatTime(timeElapsed)}
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 transition-colors mt-0.5"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <p className="text-xs text-gray-400 font-semibold mt-2">
+                        {words.length} words · Tap "Play" to replay this exact set.
+                    </p>
+                </div>
+
+                {/* Word list — scrollable */}
+                <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
+                    {words.map((word, i) => {
+                        const meta = LEVEL_META[word.CEFR] || { bg: '#f3f4f6', text: '#374151' }
+                        return (
+                            <div
+                                key={word.id}
+                                className="bg-gray-50 rounded-2xl p-3.5 border border-gray-100"
+                                style={{ animation: `fade-up 0.3s ${i * 0.03}s both` }}
+                            >
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <span className="font-black text-gray-900 text-sm">{word.word}</span>
+                                    <span className="text-xs text-gray-400 italic">{word.pos}</span>
+                                    <span
+                                        className="text-[10px] px-2 py-0.5 rounded-full font-extrabold ml-auto"
+                                        style={{ backgroundColor: meta.bg, color: meta.text }}
+                                    >
+                                        {word.CEFR}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-500 leading-snug">{word.Definition}</p>
+                                {word.Example && (
+                                    <p className="text-[11px] text-gray-400 italic mt-1.5 pl-2.5 border-l-2 border-green-200 leading-snug">
+                                        {word.Example}
+                                    </p>
+                                )}
+                            </div>
+                        )
+                    })}
+                    <div className="h-2" />
+                </div>
+
+                {/* CTA */}
+                <div className="px-5 py-4 border-t border-gray-100 shrink-0 flex gap-3">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3.5 rounded-2xl border-2 border-gray-200 text-gray-500 font-black text-sm transition-all active:scale-95"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onPlay}
+                        className="flex-2 py-3.5 rounded-2xl bg-green-600 text-white font-black text-sm shadow-lg shadow-green-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        Play Again
+                    </button>
+                </div>
+            </div>
+
+            <style>{`
+                @keyframes sheet-up {
+                    from { transform: translateY(100%); opacity: 0.6; }
+                    to   { transform: translateY(0);    opacity: 1; }
+                }
+            `}</style>
+        </div>
+    )
+}
+
 export default function SetupScreen({ onStart }) {
     const [mode, setMode] = useState('random');
     const [level, setLevel] = useState('B1');
     const [fromLevel, setFromLevel] = useState('A1');
     const [toLevel, setToLevel] = useState('B2');
     const [history, setHistory] = useState(() => loadHistory())
+    const [previewEntry, setPreviewEntry] = useState(null)
 
     const handleStart = () => {
         if (mode === 'random') onStart({ type: 'random' })
@@ -218,7 +348,7 @@ export default function SetupScreen({ onStart }) {
                             return (
                                 <button
                                     key={entry.id}
-                                    onClick={() => handleReplay(entry)}
+                                    onClick={() => setPreviewEntry(entry)}
                                     style={{ animationDelay: `${i * 0.04}s` }}
                                     className="no-press w-full bg-white rounded-2xl px-4 py-3 border-2 border-transparent
                                                hover:border-green-200 shadow-sm text-left transition-all duration-150
@@ -249,12 +379,20 @@ export default function SetupScreen({ onStart }) {
                                         </div>
                                     </div>
 
-                                    {/* Replay arrow */}
+                                    {/* Preview eye icon */}
                                     <div className="shrink-0 text-green-400">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Replay arrow */}
+                                    {/* <div className="shrink-0 text-green-400">
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                         </svg>
-                                    </div>
+                                    </div> */}
                                 </button>
                             )
                         })}
@@ -263,6 +401,18 @@ export default function SetupScreen({ onStart }) {
             )}
 
             <div className="pb-8" />
+
+            {/* Preview modal*/}
+            {previewEntry && (
+                <ReplayPreviewModal
+                    entry={previewEntry}
+                    onClose={() => setPreviewEntry(null)}
+                    onPlay={() => {
+                        setPreviewEntry(null)
+                        handleReplay(previewEntry)
+                    }}
+                />
+            )}
         </div>
     )
 }

@@ -6,19 +6,39 @@ import ResultScreen from './pages/Result.jsx'
 const HISTORY_KEY = 'vocabmatch_history'
 const MAX_HISTORY = 10
 
+function wordSetKey(words) {
+  return [...words].map(w => w.id).sort().join(',')
+}
+
 function saveRoundToHistory(gameConfig, result) {
   try {
     const existing = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
     const entry = {
       id: Date.now(),
       playedAt: new Date().toISOString(),
-      config: gameConfig,
+      config: gameConfig.type === 'replay' ? gameConfig.originalConfig : gameConfig,
       words: result.words,
       score: result.score,
       wrongAttempts: result.wrongAttempts,
       timeElapsed: result.timeElapsed
     }
-    const update = [entry, ...existing].slice(0, MAX_HISTORY)
+    // const update = [entry, ...existing].slice(0, MAX_HISTORY)
+    // localStorage.setItem(HISTORY_KEY, JSON.stringify(update))
+    let update;
+    if (gameConfig.type === 'replay') {
+      const key = wordSetKey(result.words)
+      const idx = existing.findIndex(e => wordSetKey(e.words) === key)
+      if (idx !== -1) {
+        // Replace the matched entry and bubble it to the top
+        const updated = [...existing]
+        updated.splice(idx, 1)
+        update = [entry, ...updated].slice(0, MAX_HISTORY)
+      } else {
+        update = [entry, ...existing].slice(0, MAX_HISTORY)
+      }
+    } else {
+      update = [entry, ...existing].slice(0, MAX_HISTORY)
+    }
     localStorage.setItem(HISTORY_KEY, JSON.stringify(update))
   } catch (error) {
     console.warn("Failed to save round to history:  ", error)
